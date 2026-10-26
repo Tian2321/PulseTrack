@@ -1,2 +1,3 @@
-# PulseTrack
-mini project for physical computing
+## PulseTrack
+# Physical Computing Project 2026 - IT KMITL
+
