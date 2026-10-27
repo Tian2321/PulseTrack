@@ -58,6 +58,8 @@
 
 ## โปรเจกต์นี้ทำขึ้นเพื่อการเรียนรู้ ไม่ใช่เครื่องมือทางการแพทย์ ห้ามใช้วินิจฉัยหรือติดตามภาวะสุขภาพ
 
+<img width="1587" height="2245" alt="unnamed" src="https://github.com/user-attachments/assets/075e5212-dcac-4420-a9da-fa331ffd1524" />
+
 
 
 |              std_name          |         student_id       |
