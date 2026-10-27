@@ -2,7 +2,7 @@
 
 เครื่องวัดอัตราการเต้นของหัวใจ (BPM) ด้วย Arduino ที่แสดงผลบนจอ LCD 16×2 ผ่าน **ไดรเวอร์ I2C แบบซอฟต์แวร์ที่เขียนขึ้นเอง** และใช้ไฟ LED สีเขียวและสีแดงบอกสถานะ
 
-**เดโมออนไลน์:** https://YOUR-USERNAME.github.io/YOUR-REPO/
+**website:** [https://YOUR-USERNAME.github.io/YOUR-REPO/](https://68070020-chatrapee.github.io/pulsetrack.github.io/)
 
 ## การทำงาน
 
