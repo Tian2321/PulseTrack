@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PulseTrack – เครื่องวัดอัตราการเต้นของหัวใจด้วย Arduino</title>
+<meta name="description" content="PulseTrack เครื่องวัดอัตราการเต้นของหัวใจด้วย Arduino พร้อมไดรเวอร์ I2C แบบซอฟต์แวร์สำหรับจอ LCD และไฟ LED แสดงสถานะ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;700;800&family=Noto+Sans+Thai:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1ef;
+    --panel: #ffffff;
+    --ink: #16222b;
+    --muted: #526069;
+    --line: #cfd8d4;
+    --lcd: #2257c9;
+    --lcd-text: #e9f1ff;
+    --green: #2e9e5b;
+    --red: #d8403a;
+    --off: #c9d1cd;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101a20;
+      --panel: #17252d;
+      --ink: #e8efec;
+      --muted: #9fb0b8;
+      --line: #2b3c45;
+      --off: #2b3c45;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 1.05rem/1.75 "Noto Sans Thai", system-ui, sans-serif;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--lcd); outline-offset: 3px; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 1.25rem; }
+  header.top { padding: 1rem 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  header.top strong { font-family: "Prompt", sans-serif; font-size: 1.2rem; }
+  header.top nav { display: flex; gap: 1.25rem; font-size: .95rem; }
+  header.top nav a { text-decoration: none; color: var(--muted); }
+  header.top nav a:hover { color: var(--ink); }
+
+  h1, h2, h3 { font-family: "Prompt", sans-serif; line-height: 1.35; margin: 0; }
+  h1 { font-size: clamp(2rem, 6vw, 3.4rem); font-weight: 800; max-width: 18em; }
+  h2 { font-size: 1.7rem; font-weight: 700; margin-bottom: .75rem; }
+  h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: .25rem; }
+  p { margin: 0 0 1rem; max-width: 40em; }
+  .lead { color: var(--muted); font-size: 1.15rem; margin-top: 1.25rem; }
+
+  .hero { padding: 2rem 0 3rem; }
+  .demo { margin-top: 2rem; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 150px; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .demo-body { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; padding: 1.5rem; align-items: center; }
+  @media (max-width: 680px) { .demo-body { grid-template-columns: 1fr; } }
+  .lcd {
+    background: var(--lcd); border-radius: 10px; padding: 14px 16px;
+    box-shadow: inset 0 0 0 4px #14337a;
+    font-family: "VT323", ui-monospace, monospace;
+    font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.15;
+    color: var(--lcd-text); white-space: pre; letter-spacing: .04em;
+    overflow-x: auto;
+  }
+  .leds { display: flex; gap: 1.25rem; margin-top: 1rem; flex-wrap: wrap; }
+  .led { display: flex; align-items: center; gap: .5rem; font-size: .9rem; color: var(--muted); }
+  .led i { width: 18px; height: 18px; border-radius: 50%; background: var(--off); display: block; transition: background .15s, box-shadow .15s; }
+  .led.on.g i { background: var(--green); box-shadow: 0 0 12px var(--green); }
+  .led.on.r i { background: var(--red); box-shadow: 0 0 12px var(--red); }
+  label { display: block; font-weight: 600; margin-bottom: .5rem; }
+  output { font-family: "Prompt", sans-serif; font-weight: 800; font-size: 2.6rem; display: block; line-height: 1.2; margin-bottom: .75rem; }
+  output small { font-size: 1rem; font-weight: 500; color: var(--muted); }
+  input[type=range] { width: 100%; accent-color: var(--lcd); }
+  .hint { font-size: .9rem; color: var(--muted); margin: .75rem 0 0; }
+
+  section { padding: 2.5rem 0; border-top: 1px solid var(--line); }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; gap: 1.25rem; } }
+  .cols p { color: var(--muted); font-size: 1rem; margin: 0; }
+
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .98rem; min-width: 520px; }
+  th, td { text-align: left; padding: .65rem .9rem; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .85em; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: .1em .35em; }
+  .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: .4rem; }
+  .btn { display: inline-block; padding: .6rem 1.2rem; border-radius: 10px; text-decoration: none; font-weight: 600; background: var(--ink); color: var(--bg); margin: 0 .5rem .5rem 0; }
+  .btn.alt { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
+  footer { padding: 2rem 0 3rem; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <strong>PulseTrack</strong>
+    <nav aria-label="เมนู">
+      <a href="#how">การทำงาน</a>
+      <a href="#wiring">การต่อวงจร</a>
+      <a href="#levels">ระดับ BPM</a>
+      <a href="https://github.com/YOUR-USERNAME/YOUR-REPO">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1>PulseTrack วัดชีพจรของคุณด้วยสายเพียงไม่กี่เส้น</h1>
+      <p class="lead">Arduino อ่านค่าจากเซนเซอร์ชีพจร คำนวณอัตราการเต้นของหัวใจต่อนาที (BPM) แล้วแสดงผลบนจอ LCD 16×2 ผ่านไดรเวอร์ I2C แบบซอฟต์แวร์ที่เขียนขึ้นเอง พร้อมไฟ LED สองดวงบอกสถานะให้เห็นได้ทันที</p>
+
+      <div class="demo" aria-label="การจำลองแบบโต้ตอบ">
+        <canvas id="ecg" height="150" aria-hidden="true"></canvas>
+        <div class="demo-body">
+          <div>
+            <div class="lcd" id="lcd" role="img" aria-label="จำลองหน้าจอ LCD"></div>
+            <div class="leds">
+              <span class="led g" id="ledG"><i></i>ไฟเขียว · ขา 6</span>
+              <span class="led r" id="ledR"><i></i>ไฟแดง · ขา 7</span>
+            </div>
+          </div>
+          <div>
+            <label for="bpm">ลองปรับอัตราการเต้นของหัวใจ</label>
+            <output id="out" for="bpm">72 <small>BPM</small></output>
+            <input id="bpm" type="range" min="30" max="160" value="72">
+            <p class="hint">เป็นการจำลองว่าจอ LCD และไฟ LED จริงจะแสดงผลอย่างไรในแต่ละค่า (ข้อความบนจอ LCD จริงเป็นภาษาอังกฤษ)</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section id="how">
+      <h2>การทำงาน</h2>
+      <div class="cols">
+        <div>
+          <h3>I2C แบบซอฟต์แวร์</h3>
+          <p>ไม่ใช้ไลบรารี <code>Wire.h</code> แต่ฟังก์ชัน <code>i2cStart()</code>, <code>i2cWriteByte()</code> และ <code>i2cStop()</code> สลับสถานะขา A0 และ A1 โดยตรง เพื่อสื่อสารกับบอร์ด LCD แบบ PCF8574</p>
+        </div>
+        <div>
+          <h3>ตรวจจับจังหวะการเต้น</h3>
+          <p>นับเป็นหนึ่งจังหวะเมื่อสัญญาณสูงกว่า 514 แล้วตกลงต่ำกว่า 512 ระยะเวลาระหว่างสองจังหวะใช้คำนวณ BPM ส่วนค่าขีดจำกัดสองค่าช่วยกรองสัญญาณรบกวน</p>
+        </div>
+        <div>
+          <h3>อัปเดตจอโดยไม่สะดุด</h3>
+          <p>I2C ทำงานค่อนข้างช้า จอจึงอัปเดตเฉพาะเมื่อค่า BPM เปลี่ยน และไม่เกินทุก 250 มิลลิวินาที การอ่านค่าชีพจรจึงไม่ถูกขัดจังหวะ</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="wiring">
+      <h2>การต่อวงจร</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>ชิ้นส่วน</th><th>ขาของชิ้นส่วน</th><th>ขา Arduino</th></tr></thead>
+          <tbody>
+            <tr><td>เซนเซอร์ชีพจร</td><td>สัญญาณ (S)</td><td><code>A2</code></td></tr>
+            <tr><td>จอ LCD 16×2 (บอร์ด I2C)</td><td>SDA</td><td><code>A0</code></td></tr>
+            <tr><td>จอ LCD 16×2 (บอร์ด I2C)</td><td>SCL</td><td><code>A1</code></td></tr>
+            <tr><td>ไฟ LED สีเขียว</td><td>ขาบวก (+)</td><td><code>D6</code></td></tr>
+            <tr><td>ไฟ LED สีแดง</td><td>ขาบวก (+)</td><td><code>D7</code></td></tr>
+            <tr><td>ทุกชิ้นส่วน</td><td>VCC / GND</td><td>5V / GND</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">ต่อตัวต้านทาน 220 Ω ถึง 1 kΩ อนุกรมกับ LED แต่ละดวง หากจอไม่แสดงผล ให้เปลี่ยน <code>LCD_ADDR</code> จาก <code>0x27</code> เป็น <code>0x3F</code></p>
+    </section>
+
+    <section id="levels">
+      <h2>ระดับ BPM</h2>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>BPM</th><th>ข้อความบนจอ</th><th>ไฟ LED</th><th>ความหมาย</th></tr></thead>
+          <tbody>
+            <tr><td>40 หรือต่ำกว่า</td><td>Reading...</td><td>ดับทั้งคู่</td><td>กำลังเริ่มต้น หรือยังไม่ได้วางนิ้วบนเซนเซอร์</td></tr>
+            <tr><td>41 ถึง 59</td><td>Low</td><td><span class="dot" style="background:var(--red)"></span>แดง</td><td>หัวใจเต้นช้า</td></tr>
+            <tr><td>60 ถึง 100</td><td>Normal</td><td><span class="dot" style="background:var(--green)"></span>เขียว</td><td>อยู่ในช่วงปกติขณะพัก</td></tr>
+            <tr><td>มากกว่า 100</td><td>High</td><td><span class="dot" style="background:var(--red)"></span>แดง</td><td>หัวใจเต้นเร็ว</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>สร้างด้วยตัวเอง</h2>
+      <p>โค้ดทั้งหมดอยู่ในไฟล์เดียว เปิดด้วย Arduino IDE อัปโหลดลงบอร์ด แล้ววางนิ้วบนเซนเซอร์</p>
+      <a class="btn" href="https://github.com/YOUR-USERNAME/YOUR-REPO">ดูโค้ดบน GitHub</a>
+      <a class="btn alt" href="https://github.com/YOUR-USERNAME/YOUR-REPO/blob/main/pulse_monitor.ino">pulse_monitor.ino</a>
+    </section>
+  </main>
+
+  <footer>
+    โปรเจกต์นี้ทำขึ้นเพื่อการเรียนรู้ ไม่ใช่เครื่องมือทางการแพทย์ ห้ามใช้วินิจฉัยหรือติดตามภาวะสุขภาพ
+  </footer>
+</div>
+
+<script>
+(function () {
+  var slider = document.getElementById('bpm');
+  var out = document.getElementById('out');
+  var lcd = document.getElementById('lcd');
+  var ledG = document.getElementById('ledG');
+  var ledR = document.getElementById('ledR');
+  var canvas = document.getElementById('ecg');
+  var ctx = canvas.getContext('2d');
+  var bpm = 72;
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function pad(s) { while (s.length < 16) s += ' '; return s; }
+
+  function update() {
+    bpm = parseInt(slider.value, 10);
+    out.innerHTML = bpm + ' <small>BPM</small>';
+    var msg, green = false, red = false;
+    if (bpm <= 40) msg = 'Reading...';
+    else if (bpm < 60) { msg = 'Low'; red = true; }
+    else if (bpm <= 100) { msg = 'Normal'; green = true; }
+    else { msg = 'High'; red = true; }
+    lcd.textContent = pad('BPM: ' + bpm) + '\n' + pad(msg);
+    ledG.classList.toggle('on', green);
+    ledR.classList.toggle('on', red);
+    if (reduce) draw(0);
+  }
+
+  function g(p, c, w, a) { var d = (p - c) / w; return a * Math.exp(-d * d); }
+  function wave(p) {
+    return g(p, .12, .035, .18) + g(p, .21, .012, -.15) + g(p, .235, .011, 1) +
+           g(p, .26, .014, -.3) + g(p, .42, .05, .3);
+  }
+
+  function resize() {
+    var r = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * r; canvas.height = canvas.clientHeight * r;
+    ctx.setTransform(r, 0, 0, r, 0, 0);
+    if (reduce) draw(0);
+  }
+
+  function draw(now) {
+    var w = canvas.clientWidth, h = canvas.clientHeight;
+    var style = getComputedStyle(document.documentElement);
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = bpm <= 40 ? style.getPropertyValue('--muted') :
+      (bpm >= 60 && bpm <= 100 ? style.getPropertyValue('--green') : style.getPropertyValue('--red'));
+    ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+    var speed = 140, period = 60 / bpm, t = now / 1000;
+    ctx.beginPath();
+    for (var x = 0; x <= w; x += 2) {
+      var tt = t - (w - x) / speed;
+      var phase = ((tt % period) + period) % period / period;
+      var y = bpm <= 40 ? 0 : wave(phase);
+      var py = h * .72 - y * h * .55;
+      if (x === 0) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+    }
+    ctx.stroke();
+  }
+
+  function loop(now) { draw(now); requestAnimationFrame(loop); }
+
+  slider.addEventListener('input', update);
+  window.addEventListener('resize', resize);
+  resize(); update();
+  if (!reduce) requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
