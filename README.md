@@ -4,7 +4,7 @@
 
 **website:** [https://YOUR-USERNAME.github.io/YOUR-REPO/](https://68070020-chatrapee.github.io/pulsetrack.github.io/)
 
-**video:**
+**video:** [https://YOUR-USERNAME.github.io/YOUR-REPO/](https://youtu.be/9z8b5hjCqWg)
 
 ## การทำงาน
 
